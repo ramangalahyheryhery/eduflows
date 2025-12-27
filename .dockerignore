@@ -1,0 +1,9 @@
+# Ignorer les dossiers inutiles pour le build frontend
+backend/
+.git/
+node_modules/
+*.db
+*.sqlite
+.env
+.env.*
+!deployment/nginx.conf

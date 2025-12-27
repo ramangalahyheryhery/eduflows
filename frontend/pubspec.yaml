@@ -60,7 +60,13 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  generate: true
 
+scripts:
+  build:web:
+    - flutter build web --web-renderer canvaskit --release
+  serve:web:
+    - flutter run -d chrome --web-port=8080 --web-hostname=localhost --web-browser-flag="--disable-web-security"
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

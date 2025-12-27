@@ -1,67 +1,108 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' as io;
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Méthode intelligente pour détecter la plateforme
-  static String get baseUrl {
-    if (Platform.isAndroid) {
-      print('📱 Plateforme: Android');
-      // Pour émulateur Android
-      return 'http://localhost:3000/api';
-      // Pour device Android physique (décommentez et mettez votre IP):
-      // return 'http://192.168.1.100:3000/api';
-    } else if (Platform.isIOS) {
-      print('📱 Plateforme: iOS');
-      // Pour iOS Simulator
-      return 'http://localhost:3000/api';
-    } else {
-      print('📱 Plateforme: Web/Desktop');
-      // Pour web et autres
-      return 'http://localhost:3000/api';
-    }
-  }
+  // IMPORTANT: En mode desktop Linux, on utilise l'URL COMPLÈTE
+  // En mode web, on utiliserait '/api' avec proxy
+  // Mais comme vous faites 'flutter run' (mode desktop), on a besoin de l'URL complète
+  
+  static const String baseUrl = 'http://localhost:3000/api';
   
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
-      print('🔐 Tentative de connexion: $email');
-      print('🌍 URL API: ${baseUrl}auth/login');
+      print('🚀 [DESKTOP MODE] Tentative de connexion...');
+      print('📧 Email: $email');
+      print('🌐 URL: $baseUrl/auth/login');
       
       final response = await http.post(
-        Uri.parse('${baseUrl}/auth/login'),
+        Uri.parse('$baseUrl/auth/login'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Origin': 'http://localhost:3000', // Important pour CORS
         },
         body: json.encode({
-          'email': email,
+          'email': email.trim(),
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       print('📡 Status Code: ${response.statusCode}');
-      print('📦 Réponse: ${response.body}');
-
-      final data = json.decode(response.body);
+      print('📡 Réponse: ${response.body}');
       
       if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ Connexion réussie!');
+        print('👤 User: ${data['user']?['name']} (${data['user']?['role']})');
+        print('🔑 Token reçu: ${data['token'] != null ? "OUI" : "NON"}');
         return data;
       } else {
-        throw Exception(data['message'] ?? 'Erreur de connexion (${response.statusCode})');
+        print('❌ Erreur HTTP: ${response.statusCode}');
+        String errorMessage = 'Erreur ${response.statusCode}';
+        
+        try {
+          final errorData = json.decode(response.body);
+          errorMessage = errorData['message'] ?? errorMessage;
+        } catch (_) {
+          errorMessage = 'Réponse: ${response.body}';
+        }
+        
+        throw Exception(errorMessage);
       }
     } catch (e) {
-      print('❌ Erreur API: $e');
-      throw Exception('Impossible de se connecter au serveur: $e\nVérifiez:\n1. Le serveur backend tourne-t-il?\n2. L\'URL est-elle correcte? ($baseUrl)\n3. Avez-vous les permissions réseau?');
+      print('🔥 Exception: $e');
+      print('🔥 Type: ${e.runtimeType}');
+      
+      // Messages d'erreur spécifiques
+      if (e.toString().contains('Connection refused')) {
+        throw Exception('Backend non accessible sur localhost:3000\nVérifiez que le backend est démarré.');
+      }
+      if (e.toString().contains('SocketException')) {
+        throw Exception('Erreur réseau. Vérifiez votre connexion.');
+      }
+      
+      rethrow;
+    }
+  }
+
+  // Test de connexion
+  static Future<Map<String, dynamic>> testConnection() async {
+    try {
+      print('🧪 Test connexion backend...');
+      print('🌐 URL: $baseUrl/health');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/health'),
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+      
+      print('📡 Status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ Backend accessible!');
+        print('✅ Message: ${data['message']}');
+        return data;
+      } else {
+        throw Exception('Backend erreur ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Test échoué: $e');
+      print('💡 Vérifiez que:');
+      print('   1. Le backend tourne: cd backend && npm start');
+      print('   2. Testez avec: curl http://localhost:3000/api/health');
+      throw Exception('Impossible de joindre le backend: $e');
     }
   }
 
   static Future<Map<String, dynamic>> verifyToken(String token) async {
     try {
       final response = await http.post(
-        Uri.parse('${baseUrl}/auth/verify'),
+        Uri.parse('$baseUrl/auth/verify'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -74,7 +115,7 @@ class ApiService {
         throw Exception('Token invalide');
       }
     } catch (e) {
-      throw Exception('Erreur de vérification: $e');
+      throw Exception('Erreur vérification: $e');
     }
   }
 }
