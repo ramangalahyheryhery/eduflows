@@ -1,9 +1,33 @@
-# Ignorer les dossiers inutiles pour le build frontend
-backend/
+# Ignorer les dossiers inutiles
 .git/
 node_modules/
 *.db
 *.sqlite
+*.log
+*.tmp
+*.pid
+
+# Ne pas exclure backend/ car Docker en a besoin
+# backend/  <- ENLEVER CETTE LIGNE
+
+# Ignorer les fichiers d'environnement (mais garder .env.docker pour référence)
 .env
-.env.*
-!deployment/nginx.conf
+.env.production
+.env.development
+!/.env.docker
+
+# Ignorer les dossiers de build et cache
+frontend/build/
+frontend/.dart_tool/
+frontend/.packages
+frontend/.pub-cache/
+
+# Ignorer les fichiers système
+.DS_Store
+Thumbs.db
+
+# Ignorer les dossiers d'IDE
+.vscode/
+.idea/
+*.swp
+*.swo

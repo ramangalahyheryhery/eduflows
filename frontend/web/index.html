@@ -17,12 +17,21 @@
   <title>EduFlows</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- Important pour CORS en développement -->
+  <!-- IMPORTANT: Forcer HTML renderer au lieu de CanvasKit -->
+  <script>
+    window.flutterWebRenderer = "html";
+  </script>
+  
+  <!-- CSP élargie pour développement -->
   <meta http-equiv="Content-Security-Policy" 
-        content="default-src 'self' http://localhost:3000 http://localhost:8080;
-                 connect-src 'self' http://localhost:3000 http://localhost:8080 ws://localhost:8080;
-                 script-src 'self' 'unsafe-inline' 'unsafe-eval';
-                 style-src 'self' 'unsafe-inline';">
+        content="default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 http://localhost:8080 https://www.gstatic.com https://fonts.gstatic.com https://fonts.googleapis.com;
+                 connect-src 'self' http://localhost:3000 http://localhost:8080 ws://localhost:8080 https://www.gstatic.com https://fonts.gstatic.com;
+                 script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src 'self' data: https://fonts.gstatic.com;
+                 img-src 'self' data: blob:;
+                 media-src 'self' data:;
+                 worker-src 'self' blob:;">
 </head>
 <body>
   <script>
@@ -36,9 +45,51 @@
     // Log au démarrage
     console.log('🚀 EduFlows démarre avec proxy configuré');
     console.log('🔗 API via proxy: /api -> http://localhost:3000/api');
+    
+    // Désactiver le service worker problématique
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+        console.log('🔧 Service workers désactivés');
+      });
+    }
   </script>
   
+  <!-- Flutter -->
   <script src="flutter.js" defer></script>
   <script src="main.dart.js" type="application/javascript"></script>
+  
+  <!-- Fallback si Flutter échoue -->
+  <script>
+    setTimeout(function() {
+      if (!window.flutterAppLoaded) {
+        console.warn('⚠️  Flutter n\'a pas démarré, affichage du fallback...');
+        document.body.innerHTML = `
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h1>🎓 EduFlows</h1>
+            <p>L'application est en cours de chargement...</p>
+            <p>Si cette page persiste, vérifiez:</p>
+            <ul style="text-align: left; display: inline-block;">
+              <li>La console du navigateur (F12)</li>
+              <li>Votre connexion Internet (pour CanvasKit)</li>
+              <li>Que le backend tourne sur localhost:3000</li>
+            </ul>
+            <button onclick="location.reload()" style="margin: 20px; padding: 10px 20px;">
+              Recharger la page
+            </button>
+          </div>
+        `;
+      }
+    }, 5000);
+    
+    // Marquer quand Flutter démarre
+    window.addEventListener('flutter-first-frame', function() {
+      window.flutterAppLoaded = true;
+      console.log('✅ Flutter a démarré!');
+    });
+  </script>
 </body>
 </html>
+
